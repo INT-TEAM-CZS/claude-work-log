@@ -11,7 +11,7 @@ Needs Claude Code (desktop app Code tab or the `claude` CLI) and Python 3. Any C
 In Claude Code, run:
 
 ```
-/plugin marketplace add __REPO__
+/plugin marketplace add INT-TEAM-CZS/claude-work-log
 ```
 
 ```
