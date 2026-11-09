@@ -85,10 +85,10 @@ The published artifact is private. If the user wants others to see it, tell them
    - Skip obvious false positives you can tell from the type and context (placeholders, variable names, sample values in docs)
 5. Copy `template.html` to `work-log.html` in the working folder (change nothing outside its CONFIG and DATA sections), then fill in `CATS`, `OWNER` (if the user gives a name), `NOTE` (which sources are included), `DATA_ROWS` sorted by start date, and `SECRETS`. Example rows:
    ```js
-   ["2026-07-22","2026-07-23","review","BDOS web review","AGX BD playwright","Tested the dashboard, pipeline, AI assistant and security as a reviewer","Code","name@example.com",1],
+   ["2026-07-22","2026-07-23","review","Sales dashboard review","dashboard-tests","Tested the dashboard pages, login and exports as a reviewer","Code","name@example.com",1],
    ```
    ```js
-   ["2026-05-30","2026-06-21","OpenAI API key","sk-p…","file","AI Exam Grading Bot","crit","name@example.com"],
+   ["2026-05-30","2026-06-21","OpenAI API key","sk-p…","file","Report summary bot","crit","name@example.com"],
    ```
    The page works out its date range, month buttons, source filter and filter bounds from the data, and shows a green "nothing found" panel when `SECRETS` is empty.
 6. Publish with the Artifact tool (file `work-log.html`, `icon: "table"`, a one-sentence description), then save the returned URL to config.json. If `team_artifact_url` is set, also send the log to the team (Mode T).
