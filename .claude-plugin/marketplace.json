@@ -1,0 +1,12 @@
+{
+  "name": "work-log",
+  "owner": { "name": "praewpanhp" },
+  "metadata": { "description": "Daily work log of everything done with Claude, with a leaked-secret check and an optional team log." },
+  "plugins": [
+    {
+      "name": "work-log",
+      "source": "./plugins/work-log",
+      "description": "Builds a filterable work-log table from your Claude Code, Cowork and Chat history, flags leaked API keys and passwords, and can send it to a shared team log every day."
+    }
+  ]
+}

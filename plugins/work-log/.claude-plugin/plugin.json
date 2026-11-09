@@ -1,0 +1,6 @@
+{
+  "name": "work-log",
+  "author": { "name": "praewpanhp" },
+  "description": "Builds a filterable work-log table from your Claude Code, Cowork and Chat history, flags leaked API keys and passwords, and can send it to a shared team log every day.",
+  "keywords": ["work log", "timesheet", "security", "team"]
+}

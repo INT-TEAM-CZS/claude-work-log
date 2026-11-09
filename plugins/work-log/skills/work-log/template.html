@@ -1,0 +1,228 @@
+<title>บันทึกงานกับ Claude</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: spreadsheet-style ledger — security alert panel first, then filter bar, gridded table with sticky header, status row like a sheet footer */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --fg:#1c2421; --muted:#5b6762; --line:#d5dbd8; --head:#e8ecea; --hover:#eef6f1; --accent:#1e7a4f;
+  --crit:#b42318; --crit-bg:#fdf1ef; --warn:#a15c07; --warn-bg:#fdf6e7; --ok:#1e7a4f;
+  --c1:#2f5bd3; --c2:#b4561b; --c3:#1f8a6b; --c4:#7a4fc4; --c5:#b83a6b; --c6:#5f6672; --c7:#8a7a2a; --c8:#1b7f99; --c9:#a33ea1; --c10:#4d7c0f;
+  --f-display:"Bai Jamjuree","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121614; --surface:#191e1c; --fg:#e4eae7; --muted:#97a39e; --line:#2c3431; --head:#212825; --hover:#1f2a25; --accent:#5fcf96;
+  --crit:#ff8a7a; --crit-bg:#2c1a18; --warn:#f2b14c; --warn-bg:#2a2214; --ok:#5fcf96;
+  --c1:#7d9cff; --c2:#f0955a; --c3:#4fc9a2; --c4:#b494f0; --c5:#f07aa7; --c6:#a3aab8; --c7:#d6c46a; --c8:#5cc6e0; --c9:#e48ae2; --c10:#a3d65c;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121614; --surface:#191e1c; --fg:#e4eae7; --muted:#97a39e; --line:#2c3431; --head:#212825; --hover:#1f2a25; --accent:#5fcf96;
+  --crit:#ff8a7a; --crit-bg:#2c1a18; --warn:#f2b14c; --warn-bg:#2a2214; --ok:#5fcf96;
+  --c1:#7d9cff; --c2:#f0955a; --c3:#4fc9a2; --c4:#b494f0; --c5:#f07aa7; --c6:#a3aab8; --c7:#d6c46a; --c8:#5cc6e0; --c9:#e48ae2; --c10:#a3d65c;
+  color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+h1{font-family:var(--f-display);font-size:clamp(24px,4vw,32px);margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:18px;margin:0}
+.lede{color:var(--muted);margin:4px 0 0}
+
+.alert{border:1px solid var(--line);border-left:5px solid var(--crit);border-radius:8px;background:var(--surface);overflow:hidden}
+.alert.clean{border-left-color:var(--ok)}
+.alert-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;padding:12px 16px;background:var(--crit-bg)}
+.alert.clean .alert-head{background:var(--surface)}
+.alert-head h2{color:var(--crit)}
+.alert.clean .alert-head h2{color:var(--ok)}
+.alert-head p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:70ch}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12.5px;font-weight:600;padding:2px 10px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.crit{color:var(--crit)} .chip.warn{color:var(--warn)}
+.alert table{min-width:1100px}
+.alert td{min-width:96px}
+td.lvl{white-space:nowrap;font-weight:600}
+td.lvl.crit{color:var(--crit)} td.lvl.warn{color:var(--warn)}
+td.mask{font-family:var(--f-mono);white-space:nowrap}
+td.fix{min-width:240px}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.f{display:grid;gap:3px;min-width:0}
+.f label{font-size:12px;color:var(--muted);font-weight:500}
+.f input,.f select{font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:5px 8px;min-width:0}
+.f input[type=date]{font-family:var(--f-mono)}
+.f input:focus-visible,.f select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.f.search{flex:1 1 200px}
+.f.search input{width:100%;box-sizing:border-box}
+.btn{font:inherit;font-size:13px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:5px;padding:5px 12px}
+.btn:hover{background:var(--hover)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
+
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.scroll{overflow:auto;max-height:70vh}
+table{border-collapse:collapse;width:100%;min-width:1220px;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:6px 9px;vertical-align:top;text-align:left}
+thead th{position:sticky;top:0;z-index:1;background:var(--head);font-weight:600;white-space:nowrap;user-select:none}
+thead th.sortable{cursor:pointer}
+thead th.sortable:hover{color:var(--accent)}
+thead th .arrow{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-left:4px}
+td.num,th.num{text-align:right;font-family:var(--f-mono);color:var(--muted);background:var(--head);width:38px}
+td.date{font-family:var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+td.days{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+td.dir{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+td.src{font-size:12.5px;white-space:nowrap}
+td.acct{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.assumed{color:var(--warn);font-weight:600;margin-left:2px;cursor:help}
+td.task{font-weight:600;min-width:180px}
+td.detail{color:var(--muted);min-width:320px}
+tbody tr:hover td:not(.num){background:var(--hover)}
+.tag{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--k);font-weight:500}
+.tag::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--k)}
+.empty td{text-align:center;color:var(--muted);padding:28px}
+.status{display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between;padding:7px 12px;border-top:1px solid var(--line);background:var(--head);font-size:12.5px;color:var(--muted)}
+.status b{color:var(--fg);font-family:var(--f-mono);font-weight:500}
+.breakdown{display:flex;flex-wrap:wrap;gap:4px 14px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 id="title">บันทึกงานที่ทำกับ Claude</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section class="alert" id="alert" aria-labelledby="alert-h">
+    <div class="alert-head">
+      <div><h2 id="alert-h"></h2><p id="alert-sub"></p></div>
+      <div class="chips" id="alert-chips"></div>
+    </div>
+    <div class="scroll" id="alert-table"></div>
+  </section>
+
+  <form class="filters" id="filters" autocomplete="off">
+    <div class="f"><label for="from">ตั้งแต่วันที่</label><input type="date" id="from"></div>
+    <div class="f"><label for="to">ถึงวันที่</label><input type="date" id="to"></div>
+    <div class="f"><label for="cat">หมวด</label><select id="cat"><option value="">ทุกหมวด</option></select></div>
+    <div class="f"><label for="src">แหล่ง</label><select id="src"><option value="">ทุกแหล่ง</option></select></div>
+    <div class="f"><label for="acct">บัญชี</label><select id="acct"><option value="">ทุกบัญชี</option></select></div>
+    <div class="f search"><label for="q">ค้นหา</label><input type="search" id="q" placeholder="ชื่องาน โฟลเดอร์ หรือรายละเอียด"></div>
+    <div class="f"><label>เลือกเดือน</label><div class="presets" id="presets"></div></div>
+    <button type="button" class="btn" id="reset">ล้างตัวกรอง</button>
+  </form>
+
+  <div class="sheet">
+    <div class="scroll">
+      <table>
+        <thead><tr id="head"></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="status"><span id="count"></span><span class="breakdown" id="breakdown"></span></div>
+  </div>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+// ===== CONFIG =====
+const OWNER="";
+const CATS={
+  dev:"พัฒนาระบบ / โค้ด", build:"สร้างเว็บและต้นแบบ", review:"ตรวจ / รีวิวงาน", data:"ข้อมูลและรายงาน", exam:"ข้อสอบ / แบบสำรวจ",
+  qa:"ทดสอบ / QA", docs:"เอกสารและระบบงาน", present:"พรีเซนต์ / แชร์ความรู้", personal:"งานส่วนตัว", other:"อื่น ๆ"
+};
+const SOURCES={Code:"Claude Code",Cowork:"Cowork",Chat:"Chat (claude.ai)"};
+const NOTE="รวม Claude Code และ Cowork บนเครื่องนี้ · ตัวกรองวันที่แสดงงานที่ช่วงเวลาคาบเกี่ยวกับช่วงที่เลือก · กดหัวคอลัมน์เพื่อเรียงลำดับ";
+// ===== DATA: [วันเริ่ม, วันสิ้นสุด, หมวด, ชื่องาน, โฟลเดอร์, รายละเอียด, แหล่ง, บัญชี, 1=บัญชีไม่ได้บันทึกไว้ในประวัติ (อนุมานจากบัญชีที่ล็อกอินอยู่)] =====
+const DATA_ROWS=[
+];
+// ===== SECRETS: [พบครั้งแรก, ล่าสุด, ชนิด, ค่าที่ปิดบัง, ช่องทาง typed|file|both, พบในงาน, ระดับ crit|warn, บัญชี] =====
+const SECRETS=[
+];
+// ===== จบส่วนข้อมูล =====
+
+const CK=Object.keys(CATS);
+const color=k=>`var(--c${CK.indexOf(k)%10+1})`;
+const DATA=DATA_ROWS.map((r,i)=>({id:i+1,start:r[0],end:r[1],cat:CATS[r[2]]?r[2]:"other",task:r[3],dir:r[4],detail:r[5],src:r[6]||"Code",acct:r[7]||"-",assumed:!!r[8],days:Math.round((new Date(r[1])-new Date(r[0]))/864e5)+1}));
+const COLS=[
+  {k:"id",label:"#",cls:"num"},{k:"start",label:"วันที่เริ่ม",cls:"date"},{k:"end",label:"วันที่สิ้นสุด",cls:"date"},
+  {k:"days",label:"จำนวนวัน",cls:"days"},{k:"cat",label:"หมวด"},{k:"src",label:"แหล่ง",cls:"src"},{k:"acct",label:"บัญชี",cls:"acct"},{k:"task",label:"งาน",cls:"task"},
+  {k:"dir",label:"โฟลเดอร์",cls:"dir"},{k:"detail",label:"รายละเอียด",cls:"detail",nosort:true}
+];
+const TH_MONTH=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=iso=>{const[y,m,d]=iso.split("-");return `${d}/${m}/${y}`};
+const thai=iso=>{const[y,m,d]=iso.split("-");return `${+d} ${TH_MONTH[m-1]} ${y}`};
+const lastDay=ym=>{const[y,m]=ym.split("-");return `${ym}-${String(new Date(+y,+m,0).getDate()).padStart(2,"0")}`};
+
+// Security alert
+(function(){
+  const HOW={typed:"พิมพ์ในแชท",file:"AI อ่านจากไฟล์ / ผลคำสั่ง",both:"พิมพ์ในแชท และ AI อ่านจากไฟล์"};
+  const fix=(type,lvl)=>/private key/i.test(type)?"ออก key ใหม่ ลบ key เดิมในระบบต้นทาง และเก็บไฟล์ไว้นอกโฟลเดอร์ที่ให้ AI อ่าน"
+    :/api key|token/i.test(type)?"ยกเลิก (revoke) key นี้แล้วออกใหม่ เก็บใน .env ที่ AI ไม่ต้องเปิดอ่าน"
+    :"เปลี่ยนรหัสผ่าน และใช้บัญชีทดสอบแยกเวลาให้ AI ช่วยตรวจเว็บ";
+  const crit=SECRETS.filter(s=>s[6]==="crit").length, warn=SECRETS.length-crit;
+  if(!SECRETS.length){
+    $("alert").classList.add("clean");
+    $("alert-h").textContent="ไม่พบข้อมูลลับที่หลุดให้ AI";
+    $("alert-sub").textContent="สแกนหา API key, token, private key และรหัสผ่านในประวัติแชทแล้ว ไม่พบ";
+    $("alert-table").hidden=true;return;
+  }
+  $("alert-h").textContent=`พบข้อมูลลับที่เคยส่งให้ AI ${SECRETS.length} รายการ`;
+  $("alert-sub").textContent="สแกนจากประวัติแชทและสิ่งที่ AI อ่านจากไฟล์ ค่าจริงถูกปิดบังไว้ แสดงแค่ 4 ตัวแรก ถ้ายังใช้ key หรือรหัสผ่านเหล่านี้อยู่ ควรเปลี่ยนใหม่";
+  $("alert-chips").innerHTML=(crit?`<span class="chip crit">ร้ายแรง ${crit}</span>`:"")+(warn?`<span class="chip warn">ควรเปลี่ยน ${warn}</span>`:"");
+  $("alert-table").innerHTML=`<table><thead><tr><th>ระดับ</th><th>ชนิด</th><th>ค่า (ปิดบัง)</th><th>พบครั้งแรก</th><th>ล่าสุด</th><th>ช่องทาง</th><th>พบในงาน</th><th>บัญชี</th><th>ควรทำ</th></tr></thead><tbody>${
+    SECRETS.slice().sort((a,b)=>(a[6]===b[6]?a[0].localeCompare(b[0]):a[6]==="crit"?-1:1)).map(s=>`<tr>
+      <td class="lvl ${s[6]}">${s[6]==="crit"?"ร้ายแรง":"ควรเปลี่ยน"}</td><td>${esc(s[2])}</td><td class="mask">${esc(s[3])}</td>
+      <td class="date">${fmt(s[0])}</td><td class="date">${fmt(s[1])}</td><td>${HOW[s[4]]||esc(s[4])}</td><td>${esc(s[5])}</td><td class="acct">${esc(s[7]||"-")}</td><td class="fix">${fix(s[2],s[6])}</td></tr>`).join("")
+  }</tbody></table>`;
+})();
+
+// Month presets and date bounds come from the data
+const minD=DATA.reduce((a,r)=>r.start<a?r.start:a,"9999"), maxD=DATA.reduce((a,r)=>r.end>a?r.end:a,"0000");
+const months=[];
+if(DATA.length){let [y,m]=minD.split("-").map(Number);const [ey,em]=maxD.split("-").map(Number);
+  while(y<ey||(y===ey&&m<=em)){months.push(`${y}-${String(m).padStart(2,"0")}`);m++;if(m>12){m=1;y++}}}
+const multiYear=months.length&&months[0].slice(0,4)!==months[months.length-1].slice(0,4);
+if(OWNER)$("title").textContent=`บันทึกงานกับ Claude · ${OWNER}`;
+$("note").textContent=NOTE;
+const ACCTS=[...new Set(DATA.map(r=>r.acct))];
+$("lede").textContent=DATA.length?`งานใน Claude Code และ Cowork · ${thai(minD)} – ${thai(maxD)} · บัญชี: ${ACCTS.join(", ")}`:"ยังไม่มีข้อมูล";
+$("acct").insertAdjacentHTML("beforeend",ACCTS.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join(""));
+if(DATA.some(r=>r.assumed))$("note").textContent+=" · * ประวัติ session นั้นไม่ได้บันทึกบัญชีไว้ จึงอนุมานจากบัญชีที่ล็อกอิน Claude Code อยู่ในเครื่องนี้";
+if(DATA.length){["from","to"].forEach(id=>{$(id).min=minD.slice(0,7)+"-01";$(id).max=lastDay(maxD.slice(0,7))})}
+$("cat").insertAdjacentHTML("beforeend",CK.map(k=>`<option value="${k}">${esc(CATS[k])}</option>`).join(""));
+$("src").insertAdjacentHTML("beforeend",[...new Set(DATA.map(r=>r.src))].map(s=>`<option value="${s}">${esc(SOURCES[s]||s)}</option>`).join(""));
+$("presets").innerHTML=months.map(ym=>`<button type="button" class="btn" data-ym="${ym}" aria-pressed="false">${TH_MONTH[ym.slice(5)-1]}${multiYear?" "+ym.slice(2,4):""}</button>`).join("");
+
+let sort={k:"start",dir:1};
+function renderHead(){
+  $("head").innerHTML=COLS.map(c=>{
+    const arrow=c.k===sort.k?(sort.dir>0?"▲":"▼"):"";
+    return `<th class="${c.cls||""} ${c.nosort?"":"sortable"}" data-k="${c.k}" ${c.nosort?"":`aria-sort="${c.k===sort.k?(sort.dir>0?"ascending":"descending"):"none"}"`}>${c.label}<span class="arrow">${arrow}</span></th>`;
+  }).join("");
+}
+function render(){
+  const from=$("from").value,to=$("to").value,cat=$("cat").value,src=$("src").value,acct=$("acct").value,q=$("q").value.trim().toLowerCase();
+  const rows=DATA.filter(r=>(!from||r.end>=from)&&(!to||r.start<=to)&&(!cat||r.cat===cat)&&(!src||r.src===src)&&(!acct||r.acct===acct)&&(!q||(r.task+" "+r.dir+" "+r.detail+" "+CATS[r.cat]).toLowerCase().includes(q)));
+  rows.sort((a,b)=>{const x=a[sort.k],y=b[sort.k];return (x<y?-1:x>y?1:a.id-b.id)*sort.dir});
+  $("rows").innerHTML=rows.length?rows.map(r=>`<tr>
+    <td class="num">${r.id}</td><td class="date">${fmt(r.start)}</td><td class="date">${fmt(r.end)}</td><td class="days">${r.days}</td>
+    <td><span class="tag" style="--k:${color(r.cat)}">${esc(CATS[r.cat])}</span></td><td class="src">${esc(SOURCES[r.src]||r.src)}</td><td class="acct">${esc(r.acct)}${r.assumed?`<span class="assumed" title="ประวัติ session นี้ไม่ได้บันทึกบัญชีไว้ อนุมานจากบัญชีที่ล็อกอิน Claude Code อยู่">*</span>`:""}</td>
+    <td class="task">${esc(r.task)}</td><td class="dir">${esc(r.dir)}</td><td class="detail">${esc(r.detail)}</td></tr>`).join("")
+    :`<tr class="empty"><td colspan="${COLS.length}">${DATA.length?"ไม่มีงานในช่วงที่เลือก ลองขยายช่วงวันที่หรือกด ล้างตัวกรอง":"ยังไม่มีงานในบันทึก"}</td></tr>`;
+  $("count").innerHTML=`แสดง <b>${rows.length}</b> จาก <b>${DATA.length}</b> รายการ`;
+  const c={};rows.forEach(r=>c[r.cat]=(c[r.cat]||0)+1);
+  $("breakdown").innerHTML=CK.filter(k=>c[k]).map(k=>`<span class="tag" style="--k:${color(k)}">${esc(CATS[k])} <b>${c[k]}</b></span>`).join("");
+  document.querySelectorAll("#presets .btn").forEach(b=>b.setAttribute("aria-pressed",from===b.dataset.ym+"-01"&&to===lastDay(b.dataset.ym)));
+}
+$("head").addEventListener("click",e=>{const th=e.target.closest("th.sortable");if(!th)return;
+  sort=sort.k===th.dataset.k?{k:sort.k,dir:-sort.dir}:{k:th.dataset.k,dir:1};renderHead();render()});
+$("presets").addEventListener("click",e=>{const b=e.target.closest(".btn");if(!b)return;
+  if(b.getAttribute("aria-pressed")==="true"){$("from").value="";$("to").value=""}
+  else{$("from").value=b.dataset.ym+"-01";$("to").value=lastDay(b.dataset.ym)}
+  render()});
+["from","to","cat","src","acct","q"].forEach(id=>$(id).addEventListener("input",render));
+$("filters").addEventListener("submit",e=>e.preventDefault());
+$("reset").addEventListener("click",()=>{["from","to","cat","src","acct","q"].forEach(id=>$(id).value="");render()});
+renderHead();render();
+</script>
