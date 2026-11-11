@@ -25,10 +25,11 @@ The user's own files live in the working folder `~/.claude/claude-work-log/` (cr
     "artifact_url": "https://claude.ai/artifact/...",
     "chat_export": null,
     "team_artifact_url": null,
+    "team": null,
     "exclude_topics": []
   }
   ```
-  `chat_export` is the path of a claude.ai export if the user gave one. `team_artifact_url` is the team log the user joined (see Mode T), or null. `exclude_topics` lists subjects the user does not want in the log. Never add them to the table, in any mode.
+  `chat_export` is the path of a claude.ai export if the user gave one. `team_artifact_url` is the team log the user joined (see Mode T), or null. `team` is the name of the user's team inside that team log (e.g. "Dev", "QA", "HR"), used by the lead's page to filter by team. `exclude_topics` lists subjects the user does not want in the log. Never add them to the table, in any mode.
 
 Run the script with `python -I` (Windows) or `python3 -I` (macOS/Linux) and its full path in the base directory, adding `--chat-export <path>` whenever `chat_export` is set. If an old `work_sources.py` is left in the working folder from the single-file version of this skill, ignore it.
 
@@ -119,7 +120,7 @@ How it works:
 - A member appears in the lead's roster after opening the team link once while signed in (the page registers them). They need Contributor access or higher; Viewer or Commenter cannot write.
 
 Joining (once):
-1. Get the team log link from the user and save it as `team_artifact_url` in config.json.
+1. Get the team log link from the user and save it as `team_artifact_url` in config.json. Ask which team they belong to (use the exact name the lead uses, e.g. "Dev") and save it as `team`. If they change teams later, update `team` and send again.
 2. Tell the user to open the link once in claude.ai while signed in, and to ask the team lead for Contributor access if it says they cannot send data.
 3. Send the log now ("Sending to the team log").
 4. Tell the user what the team lead will see: every row and every masked secret in their log, their Claude account email, and when they last sent it. Nothing else from their chat history leaves the computer.
@@ -128,8 +129,9 @@ Sending to the team log (after every Mode A or Mode B publish):
 1. Read the document: Artifact database tool, `action: "get"`, `url` = `team_artifact_url`, collection `data/users/me`, doc_id `log`. Note its `version`, or that it does not exist yet.
 2. Build the document from the personal page's data:
    ```json
-   {"account": "<the user's Claude account email>", "updatedAt": "<now, ISO 8601 with offset>", "rows": [ ...DATA_ROWS ], "secrets": [ ...SECRETS ]}
+   {"account": "<the user's Claude account email>", "team": "<team from config.json, or null>", "updatedAt": "<now, ISO 8601 with offset>", "rows": [ ...DATA_ROWS ], "secrets": [ ...SECRETS ]}
    ```
+   Members without a `team` show as "ไม่ระบุทีม" on the lead's page.
    Rows and secrets use exactly the same arrays as `work-log.html`. Map each row's category to one of the team keys: `dev`, `build`, `review`, `grade`, `exam`, `data`, `qa`, `docs`, `present`, `personal`, `other` (use the closest; `other` if none fits). When a team log is set, prefer these keys in the personal page's `CATS` too.
    Leave out rows in the `personal` category unless the user said personal work may go to the team.
 3. Write it with `action: "set"` and `file_path` pointing at a JSON file holding the document (write it to `team-log.json` in the working folder first); pass `if_version` with the version from step 1 when the document already exists. If the write reports a newer version, read again and redo the write.
