@@ -32,7 +32,17 @@ Run `/plugin`, open **Marketplaces**, select **work-log** and turn on auto-updat
 /plugin marketplace update work-log
 ```
 
-## Join a team log
+## Join the team server
+
+1. Get the **team key** from your team lead (sent privately; never post it anywhere public).
+2. Make sure the team lead has added the email you sign in to Claude with.
+3. Tell Claude: `Join the team server, the key is <key>` (or in Thai: `เชื่อมระบบทีม key คือ <key>`)
+
+Claude checks the key and your registration and tells you if anything is missing. From then on every update also sends your log to the server. To check later, say `Check the team connection`.
+
+The team lead sees your table rows, masked secret warnings, your Claude account email, and when you last sent. Your chat history never leaves your computer. Personal-category rows are not sent unless the team rules allow it. Your own copy of the table stays in `~/.claude/claude-work-log/work-log.html`; open it in a browser any time.
+
+## Join a team log (older Artifact version)
 
 1. Ask your team lead for the team log link and **Contributor** access.
 2. Open the link once in claude.ai while signed in.
@@ -50,6 +60,7 @@ Tell Claude: `Update my work log every day at 5 pm`. The Claude app must be open
 plugins/work-log/skills/work-log/
   SKILL.md           instructions Claude follows
   work_sources.py    reads local history and scans for secrets (prints masked values only)
+  team_sync.py       joins the team server, fetches the team rules, sends the log
   template.html      the empty table page
 ```
 
