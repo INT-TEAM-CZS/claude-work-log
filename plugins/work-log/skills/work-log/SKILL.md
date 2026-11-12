@@ -133,7 +133,7 @@ Joining (once):
 1. Get the team key from the user (the team lead sends it privately). If the user has not given it yet, ask for it.
 2. Run `team_sync.py join --key <KEY>` (add `--server <URL>` only if the team lead gave a server address). It saves the key to config.json and checks it. Do not repeat the key back to the user.
 3. Act on the result:
-   - `registered: yes`: tell the user it worked, showing the account, company and team the script printed. Save that team as `team` in config.json.
+   - `registered: yes`: tell the user it worked, showing the account, company and team the script printed. If `team` in config.json is empty, save that team there; never change a `team` that is already set, because an Artifact team log may still use it. The server always files the log under the team on its employee list.
    - `NOT_REGISTERED`: tell the user which email the script checked and to ask the team lead to add exactly that email (it must be the email they sign in to Claude with).
    - `TEAM_KEY_INVALID`: the key was mistyped or is outdated; ask for it again.
 4. If there is no `work-log.html` yet, continue with Mode A now. Otherwise send the log now ("Sending to the team server").
