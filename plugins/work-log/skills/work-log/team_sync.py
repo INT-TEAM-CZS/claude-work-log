@@ -15,6 +15,7 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_SERVER = "https://work-log-server-production.up.railway.app"
@@ -141,7 +142,8 @@ def cmd_send(cfg: dict, args) -> int:
         "account": email,
         "team": doc.get("team") or cfg.get("team"),
         "tool": args.tool,
-        "updatedAt": doc.get("updatedAt"),
+        # Stamp the real send time here rather than trusting a hand-written value.
+        "updatedAt": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "rows": doc.get("rows", []),
         "secrets": doc.get("secrets", []),
     }
