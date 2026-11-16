@@ -30,9 +30,11 @@ The user's own files live in the working folder `~/.claude/claude-work-log/` (cr
     "team_key": null,
     "team_artifact_url": null,
     "team": null,
-    "exclude_topics": []
+    "exclude_topics": [],
+    "last_update": null
   }
   ```
+  `last_update` is the last date (YYYY-MM-DD, local time) whose work is already in the log; Mode A and Mode B set it, and Mode B uses it to catch up on days it missed.
   `artifact_url` is the user's personal artifact if they have one (older setups); new setups that send to the team server do not need one. `chat_export` is the path of a claude.ai export if the user gave one. `team_key` is the team server key the user joined with (see Mode S); `server_url` is null unless the team lead gave a different server. `team_artifact_url` is the older Artifact team log the user joined (see Mode T), or null. `team` is the name of the user's team (e.g. "INT", "QA"). `exclude_topics` lists subjects the user does not want in the log. Never add them to the table, in any mode.
 
   Treat `team_key` like a password: never print it, never put it in the table, a page or a message, and never show config.json's contents to the user. `team_sync.py` reads it from config.json itself.
@@ -108,22 +110,28 @@ The published artifact is private. If the user wants others to see it, tell them
    The page works out its date range, month buttons, source filter and filter bounds from the data, and shows a green "nothing found" panel when `SECRETS` is empty.
 6. Personal artifact: if `team_key` is set, do not publish one; the log goes to the team server and `work-log.html` stays on the computer as the user's own copy. Without `team_key`, or if the user asks for a personal artifact, publish with the Artifact tool (file `work-log.html`, `icon: "table"`, a one-sentence description) and save the returned URL as `artifact_url`.
 7. If `team_key` is set, send the log to the server ("Sending to the team server" under Mode S). If `team_artifact_url` is set, also send it to the Artifact team log (Mode T).
-8. Tell the user where the log is (the artifact link, or the server and the local `work-log.html`), the number of rows and categories, and the number of exposed secrets with what to do about them (revoke and reissue keys, change passwords). Then ask whether they want an automatic daily update (Mode C).
+8. Save today's date as `last_update` in config.json.
+9. Tell the user where the log is (the artifact link, or the server and the local `work-log.html`), the number of rows and categories, and the number of exposed secrets with what to do about them (revoke and reissue keys, change passwords). Then ask whether they want an automatic daily update (Mode C).
 
 ## Mode B: daily update
 
 1. Read config.json.
-2. Run `--date today` (or the date the user named) and `--secrets`. If `--date` prints `NO_SESSIONS` and `--secrets` shows nothing new compared with the page, stop without editing or publishing.
-3. If `artifact_url` is set, read the current artifact with the Artifact tool (`action: "read"`, `url` from config) and build on the full-page file the result points to. Otherwise build on `work-log.html` in the working folder. Never rewrite the page from scratch, because the user may have edited it.
-4. Update `DATA_ROWS`:
-   - Work that continues an existing row: extend that row's end date to today and add a short note of today's work to its details.
-   - New work: append a row with start date = end date = today.
+2. Work out which days to cover (catch-up). The scheduled run can be missed when the computer is off, asleep, or the Claude app is closed at the set time; the app then starts the missed run once, as soon as it is open again, and that run may land on a later day (even just after midnight). So a scheduled run, or a request for "today", covers every day not yet in the log, not only today:
+   - Start: the day after `last_update`. If `last_update` is not set (older setups), the day after the latest end date in `DATA_ROWS`. If neither exists, today.
+   - End: today. If the start is more than 14 days back, start 14 days back and tell the user the older days were skipped (they can ask for a specific date).
+   - If the user named a single date, cover only that date and do not change `last_update`.
+3. Run `--date YYYY-MM-DD` for each day in that range, oldest first, and `--secrets` once. If every day prints `NO_SESSIONS` and `--secrets` shows nothing new compared with the page, save today's date as `last_update` and stop without editing or publishing.
+4. If `artifact_url` is set, read the current artifact with the Artifact tool (`action: "read"`, `url` from config) and build on the full-page file the result points to. Otherwise build on `work-log.html` in the working folder. Never rewrite the page from scratch, because the user may have edited it.
+5. Update `DATA_ROWS`, one day at a time, oldest first, using the date the work was actually done (never the date of this run):
+   - Work that continues an existing row: extend that row's end date to that day and add a short note of that day's work to its details.
+   - New work: append a row with start date = end date = that day.
    - Fill the account fields as in Mode A. When extending a row with a session whose account is recorded, set its assumed flag to `0`.
    - Use a category already in `CATS`; use `other` if none fits. Follow "What goes in the table".
-5. Update `SECRETS` from `--secrets`: never remove existing rows (the user may have redacted their history while the keys still need rotating), update last-seen dates of rows that still appear, and add new fingerprints.
-6. Save over `work-log.html`. If `artifact_url` is set, publish with `file_path` = that file and `url` = `artifact_url`. Always pass the url, or a new artifact is created. Do not pass an icon.
-7. If `team_key` is set, send the updated log to the server ("Sending to the team server" under Mode S). If `team_artifact_url` is set, also send it to the Artifact team log ("Sending to the team log" under Mode T).
-8. Report briefly how many rows were added or extended, whether the server and/or team log were updated (or why not), and say clearly if a new secret was found today.
+6. Update `SECRETS` from `--secrets`: never remove existing rows (the user may have redacted their history while the keys still need rotating), update last-seen dates of rows that still appear, and add new fingerprints.
+7. Save over `work-log.html`. If `artifact_url` is set, publish with `file_path` = that file and `url` = `artifact_url`. Always pass the url, or a new artifact is created. Do not pass an icon.
+8. If `team_key` is set, send the updated log to the server ("Sending to the team server" under Mode S). If `team_artifact_url` is set, also send it to the Artifact team log ("Sending to the team log" under Mode T).
+9. Save today's date as `last_update` in config.json, only after the page is saved (a failed send to the server or team log does not block this; the next run sends the whole log again).
+10. Report briefly how many rows were added or extended (and which days were caught up, if more than today), whether the server and/or team log were updated (or why not), and say clearly if a new secret was found today.
 
 ## Mode S: join the team server
 
@@ -187,11 +195,12 @@ Use the Claude app's `create_scheduled_task` tool (load it with ToolSearch if ne
 - `prompt` (the first line must be this marker so the script leaves the task's own sessions out of the log):
   ```
   [daily-work-log-task]
-  Use the work-log skill in Mode B (daily update) for today.
+  Use the work-log skill in Mode B (daily update), catching up on any days missed since the last update.
   ```
 
 Tell the user:
-- The Claude app must be open for the task to run on time. If it is closed, the task runs the next time the app opens.
+- The Claude app must be open for the task to run on time. If the computer is off or asleep, or the app is closed, at that time, the missed run starts by itself as soon as the app is open again, and it fills in every day that was missed (up to 14 days), each under the day the work was done. Nothing needs to be done by hand.
+- To make the catch-up happen right after the computer starts, they can set the Claude app to open at login (Windows: Settings → Apps → Startup; macOS: System Settings → General → Login Items).
 - They can view, pause or change the schedule under Scheduled in the sidebar.
 - Chat from claude.ai is not picked up automatically; they need a fresh export whenever they want it refreshed.
 - If the team server or a team log is set, the daily run also sends to it.
